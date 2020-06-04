@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 3186883708048357878}
   - component: {fileID: 3186883708048357879}
   - component: {fileID: 3186883708048357876}
-  - component: {fileID: 3186883708048357877}
+  - component: {fileID: 4819684089487455296}
   m_Layer: 0
-  m_Name: ChunkTerrain
+  m_Name: TerrainChunk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3186883708048357866}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 32, y: 4.9485826, z: 32}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -93,7 +93,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 14
   m_Mesh: {fileID: 0}
---- !u!114 &3186883708048357877
+--- !u!114 &4819684089487455296
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -102,6 +102,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 3186883708048357866}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: af966b8b0b95c04498854c42d3e002ef, type: 3}
+  m_Script: {fileID: 11500000, guid: cd643a32dcd6b444cb7411ddbc1efe5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

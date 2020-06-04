@@ -18,9 +18,11 @@ public class MapGenerator : MonoBehaviour
     public Gradient gradient;
     public Transform player;
     public Transform water;
-    public Chunk terrainChunk;
+    public TerrainChunk terrainChunk;
+    public WaterChunk waterChunk;
     public Material chunkMaterial;
-    
+    public Material waterMaterial;
+
     private float maxHeight;
     private float minHeight;
     private (int, int) currentChunkPos;
@@ -29,11 +31,13 @@ public class MapGenerator : MonoBehaviour
     private Color[] colors;
     private Vector3[] vertices;
     private int[] triangles;
-    private Dictionary<(int, int), Chunk> chunks = new Dictionary<(int, int), Chunk>();
+    private Dictionary<(int, int), TerrainChunk> chunks = new Dictionary<(int, int), TerrainChunk>();
+    private Dictionary<(int, int), WaterChunk> waters = new Dictionary<(int, int), WaterChunk>();
 
     void Start()
     {
         player.position = new Vector3(resolution / 2, 10f, resolution / 2);
+        waterChunk.GetComponent<MeshRenderer>().material = waterMaterial; 
         currentChunkPos = (-1, -1);
     }
 
@@ -42,12 +46,7 @@ public class MapGenerator : MonoBehaviour
         GenerateMap();
     }
 
-    public void GenerateMap() 
-    {
-        CreateChunks();
-    }
-
-    private void CreateChunks()
+    private void GenerateMap()
     {
         var chunkPos = GetChunkPostion(player.position);
 
@@ -55,9 +54,10 @@ public class MapGenerator : MonoBehaviour
         {
             currentChunkPos = chunkPos;
 
-            foreach (var item in chunks)
+            foreach (var key in chunks.Keys)
             {
-                chunks[item.Key].gameObject.SetActive(false);
+                chunks[key].gameObject.SetActive(false);
+                waters[key].gameObject.SetActive(false);
             }
 
             var chunkCoords = new (int, int)[]{
@@ -77,47 +77,76 @@ public class MapGenerator : MonoBehaviour
                 if (chunks.ContainsKey((x, z)))
                 {
                     chunks[(x, z)].gameObject.SetActive(true);
+                    waters[(x, z)].gameObject.SetActive(true);
                     continue;
                 }
 
-                var currentChunk = Instantiate<Chunk>(terrainChunk, new Vector3(x / resolution, 0, z / resolution), Quaternion.identity, transform);
-                currentChunk.coords = (x, z);
-                currentChunk.gameObject.layer = LayerMask.NameToLayer("Land");
-                currentChunk.GetComponent<MeshRenderer>().material = chunkMaterial;
-                
-                chunks[(x, z)] = currentChunk;
-
-                CreateShape(x, z);
-                UpdateMesh(currentChunk);
+                CreateChunk(x, z);
+                CreateWater(x, z);
             }
         }
     }
 
-    private (int, int) GetChunkPostion(Vector3 pos)
+    private void CreateWater(int x, int z) 
     {
-        return (
-            Mathf.FloorToInt(pos.x / resolution) * resolution, 
-            Mathf.FloorToInt(pos.z / resolution) * resolution
-        );
+        Vector3[] vertices = new Vector3[]
+        {
+            new Vector3(x, 0, z),
+            new Vector3(x + resolution + 1, 0, z),
+            new Vector3(x, 0, z + resolution + 1),
+            new Vector3(x + resolution + 1, 0, z + resolution + 1),
+        };
+        
+        int[] triangles = new int[] {0, 2, 1, 1, 2, 3};
+
+        Vector2[] uv = new Vector2[] 
+        {
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(0, 1),
+            new Vector2(1, 1),
+        };
+
+        WaterChunk water = Instantiate<WaterChunk>(waterChunk, new Vector3(x / resolution, 0, z / resolution), Quaternion.identity, transform);
+        
+        water.CreateMesh();
+
+        water.transform.position += new Vector3(0, Mathf.Abs(minHeight - maxHeight) * .359f, 0);      
+        
+        water.Mesh.vertices = vertices;
+        water.Mesh.triangles = triangles;
+        water.Mesh.uv = uv;
+
+        water.Mesh.RecalculateNormals();
+        water.UpdateMesh();
+
+        waters[(x, z)] = water;
     }
 
-    private void CreateShape(int x0, int z0)
+    
+
+    private void CreateChunk(int x, int z)
     {
+        TerrainChunk currentChunk = Instantiate<TerrainChunk>(terrainChunk, new Vector3(x / resolution, 0, z / resolution), Quaternion.identity, transform);
+        currentChunk.coords = (x, z);
+        currentChunk.gameObject.layer = LayerMask.NameToLayer("Land");
+        currentChunk.GetComponent<MeshRenderer>().material = chunkMaterial;
+        
         minHeight = 0;
         maxHeight = 0;
 
         vertices = new Vector3[(resolution + 2) * (resolution + 2)];
        
-        for (int i = 0, z = z0; z <= z0 + resolution + 1; z++)
+        for (int i = 0, z0 = z; z0 <= z + resolution + 1; z0++)
         {
-            for (int x = x0; x <= x0 + resolution + 1; x++, i++)
+            for (int x0 = x; x0 <= x + resolution + 1; x0++, i++)
             {
-                var y = CalculateHeight(x, z);
+                var y = CalculateHeight(x0, z0);
                 
                 if (y > maxHeight) maxHeight = y;
                 if (y < minHeight) minHeight = y;
                 
-                vertices[i] = new Vector3(x, y, z);
+                vertices[i] = new Vector3(x0, y, z0);
             }
         }
 
@@ -125,10 +154,9 @@ public class MapGenerator : MonoBehaviour
 
         int vert = 0;
         int tris = 0;
-
-        for (int z = 0; z < resolution + 1; z++)
+        for (int z0 = 0; z0 < resolution + 1; z0++)
         {
-            for (int x = 0; x < resolution + 1; x++)
+            for (int x0 = 0; x0 < resolution + 1; x0++)
             {
                 triangles[tris + 0] = vert + 0;
                 triangles[tris + 1] = vert + resolution + 1 + 1;
@@ -152,10 +180,11 @@ public class MapGenerator : MonoBehaviour
             colors[j++] = gradient.Evaluate(height);
         }
 
-        // water.position = new Vector3(transform.position.x, Mathf.Abs(minHeight - maxHeight) * .356f, transform.position.z);
+        UpdateMesh(currentChunk);
+        chunks[(x, z)] = currentChunk;
     }
 
-    private void UpdateMesh(Chunk chunk) 
+    private void UpdateMesh(TerrainChunk chunk) 
     {
         if (chunk.Mesh == null)
             chunk.CreateMesh();
@@ -190,27 +219,12 @@ public class MapGenerator : MonoBehaviour
     
         return e1 + e2 + e3;
     }
-}
 
-public static class MiniNoise
-{
-    public static float Noise (float x, float z, int resolution, float s1, float a1, float s2, float a2, float s3, float a3, int xOff, int zOff) 
+    private (int, int) GetChunkPostion(Vector3 pos)
     {
-        var x1 = x / resolution * s1 + xOff;
-        var z1 = z / resolution * s1 + zOff;
-
-        var e1 = a1 * Mathf.PerlinNoise(x1, z1);
-
-        var x2 = x / resolution * s2 + xOff;
-        var z2 = z / resolution * s2 + zOff;
-
-        var e2 = a2 * Mathf.PerlinNoise(x2, z2);;
-    
-        var x3 = x / resolution * s3 + xOff;
-        var z3 = z / resolution * s3 + zOff;
-
-        var e3 = a3 * Mathf.PerlinNoise(x3, z3);;
-    
-        return e1 + e2 + e3;
+        return (
+            Mathf.FloorToInt(pos.x / resolution) * resolution, 
+            Mathf.FloorToInt(pos.z / resolution) * resolution
+        );
     }
 }

@@ -36,7 +36,8 @@ public class PlayerController : MonoBehaviour
             var desiredAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref smoothRotationVelocity, smoothRotationForce);
             transform.rotation = Quaternion.Euler(0, desiredAngle, 0);
 
-            var movDirection = Quaternion.Euler(0, desiredAngle, 0) * Vector3.forward;
+            var unit = vertical < 0 ? Vector3.back : Vector3.forward;
+            var movDirection = Quaternion.Euler(0, desiredAngle, 0) * unit;
             controller.Move(movDirection * speed * Time.deltaTime);
         }
 
